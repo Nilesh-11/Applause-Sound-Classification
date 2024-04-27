@@ -8,7 +8,6 @@ from pydub.utils import mediainfo
 from matplotlib.widgets import Slider
 from keras.preprocessing import image
 import matplotlib.pyplot as plt
-import librosa.display
 
 from Model.model import create_model
 from Model.helper_spectogram import GenerateSpectograms
@@ -16,35 +15,30 @@ from Model.helper_audio import convert_to_wav
 from Model.helper_audio import save_segments
 from Model.helper_audio import split_audio_into_segments
 from Model.helper_audio import remove_silence
+from Model.helper_audio import record_audio
 from Model.model import GetSpectograms
 from Model.helper_folder import create_folder
 from Model.helper_folder import remove_folder
+from Model.helper_folder import extract_times_from_filename
 
 Data_path = "./Data/"
 segments_path = "./Data/Segments"
 Spectogram_path = "./Data/Spectogram"
 Model_path = "./Model/Training/model-13-0.9687.keras"
+recorded_audio_path = "./Data/"
+recorded_audio_filename = "recorded_audio.wav"
 stamps = {}
 duration = 0
+record_duration = 0
+choice = "file"
+segment_length_sec = None
+audio_duration_sec = None
 
 def select_file():
     root = tk.Tk()
     root.withdraw()  # Hide the main window
     file_path = filedialog.askopenfilename()  # Prompt the user to select a file
     return file_path
-
-def extract_times_from_filename(filename):
-    try:
-        # Split the filename using '_' as delimiter
-        filename = filename.rstrip('.png')
-        parts = filename.split('_')
-        # Extract start and end times from the filename
-        start_time = int(parts[-3].split('_')[-1].replace('ms', ''))
-        end_time = int(parts[-1].split('_')[-1].replace('ms', ''))
-        return start_time, end_time
-    except ValueError:
-        print(f"Error extracting times from filename: {filename}")
-        return None, None
 
 def binary_search(arr, x):
     low = 0
@@ -66,17 +60,45 @@ def calculate_values(x, predictions, keys):
         return 0
     return predictions[result][0][0]
 
+
 def on_submit():
-    global segment_length_sec
+    global segment_length_sec, audio_duration_sec
     segment_length_sec = int(segment_length_entry.get())
+    if choice == "audio":
+        audio_duration_sec = int(audio_duration_entry.get())
     root.quit()
-    
+    print_results()
     quit_application()
-    pass
 
 def quit_application():
     root.quit()
     root.destroy()
+
+def upload_file_gui():
+    global choice
+    choice = "file"
+    segment_length_label.pack()
+    segment_length_entry.pack()
+    submit_button.pack()
+    root.geometry("300x200")
+
+def record_audio_gui():
+    global choice
+    choice = "audio"
+    audio_label = tk.Label(root, text="To start recording audio, close this window.")
+    audio_label.pack()
+    segment_length_label.pack()
+    segment_length_entry.pack()
+    audio_duration_label.pack()
+    audio_duration_entry.pack()
+    submit_button.pack()
+    root.geometry("400x250")
+
+def print_results():
+    print("Choice:", choice)
+    print("Segment Length:", segment_length_sec)
+    if choice == "audio":
+        print("Audio Duration:", audio_duration_sec)
 
 def StartKar():
     global segments_path, Spectogram_path
@@ -92,27 +114,35 @@ def Donewiththis():
 
 if __name__ == "__main__":
     StartKar()
-    segment_length_sec = None
-
     root = tk.Tk()
     root.title("Segment Length Input")
     root.geometry("300x200")
 
-    segment_length_label = tk.Label(root, text="Segment Length (sec):")
-    segment_length_label.pack()
+    upload_button = tk.Button(root, text="Upload File", command=upload_file_gui)
+    upload_button.pack()
 
+    record_button = tk.Button(root, text="Record Audio", command=record_audio_gui)
+    record_button.pack()
+
+    segment_length_label = tk.Label(root, text="Segment Length (sec):")
     segment_length_entry = tk.Entry(root)
-    segment_length_entry.pack()
+
+    audio_duration_label = tk.Label(root, text="Audio Duration (sec):")
+    audio_duration_entry = tk.Entry(root)
 
     submit_button = tk.Button(root, text="Submit", command=on_submit)
-    submit_button.pack()
 
     root.protocol("WM_DELETE_WINDOW", quit_application)
 
     root.mainloop()
 
     # display_message_for_time("Please select audio file : ", 2000)
-    selected_file = select_file()
+    if choice == "file": 
+        selected_file = select_file() 
+    else :
+        record_audio(audio_duration_sec, recorded_audio_path, recorded_audio_filename)
+        selected_file = os.path.join(recorded_audio_path, recorded_audio_filename)  
+
     print("Selected file:", selected_file)
 
     # Convert the file to WAV format (if possible) and print the result
@@ -143,8 +173,8 @@ if __name__ == "__main__":
         # Load and preprocess the image data
         data = []
         data.append(image.img_to_array(image.load_img(os.path.join(Spectogram_path, file), target_size=(224, 224, 3))))
-        data = np.array(data)  # Convert the data to a numpy array
-        data = data / 255  # Normalize the pixel values
+        data = np.array(data) 
+        data = data / 255 
 
         # Make predictions using the model
         prediction = model.predict(data)
@@ -198,7 +228,7 @@ if __name__ == "__main__":
         plt.ylabel('Applause Probability')
         plt.title('Applause Sound Detector')
         plt.grid(True)
-        plt.savefig(f'prediction_results-len={duration}.png')  # Save the figure as prediction_results.png in the current directory
+        plt.savefig(f'./Results/prediction_results-len={duration}.png')  # Save the figure as prediction_results.png in the current directory
         plt.show()
 
     plot_prediction_results(duration)

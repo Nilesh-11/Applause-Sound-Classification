@@ -11,17 +11,11 @@ from keras.layers import Flatten, Dense
 
 checkpoint_path = "./Training/model-{epoch:02d}-{val_accuracy:.4f}.weights.h5"
 
-Applause_path = "./Data/Applause/Segments"
-Spectogram_Applause_path = "./Spectogram/Applause"
+Applause_path = "./Model/Data/Test/Segments/Applause"
+Spectogram_Applause_path = "./Model/Data/Test/Spectogram/Applause"
 
-Randomaudio_path = "./Data/Randomaudio/Segments"
-Spectogram_Randomaudio_path = "./Spectogram/Randomaudio1"
-
-Youtube_path = "./Data/Youtube/Segments"
-Spectogram_Youtube_path = "./Spectogram/Youtube"
-
-Random2_path = "./Data/Randomaudio2/Segments"
-Spectogram_Random2_path = "./Spectogram/Randomaudio2"
+Randomaudio_path = "./Model/Data/Test/Segments/RandomAudio"
+Spectogram_Randomaudio_path = "./Model/Data/Test/Spectogram/RandomAudio"
 
 def SortData(flush_path):
     print("This function needs to be run once...")
@@ -97,32 +91,17 @@ def show_images(images):
     plt.show()
     plt.close(fig)
 
+def GetSpectograms(path):
+    images = []
+    for file in os.listdir(path):
+        images.append(image.img_to_array(image.load_img(os.path.join(path, file), target_size=(224, 224, 3))))
+        if len(images) % 1000 == 0:
+            print(f"Images len :", len(images)," : ", path)
+        if len(images) == 3000:
+            return images
+    return images
+
 if __name__ == "__main__":
-    # SortData(Randomaudio_path)
-    # GenerateSpectograms(Applause_path, Spectogram_Applause_path)
-    # GenerateSpectograms(Randomaudio_path, Spectogram_Randomaudio_path)
-    # GenerateSpectograms(Youtube_path, Spectogram_Youtube_path)
-    # GenerateSpectograms(Random2_path, Spectogram_Random2_path)
-    
-    # audio_path = "./Data/Youtube/Applause/Applause.wav"  # Replace with your input audio file path
-    # output_path = "./Data/Youtube/Applause/Segments"  # Replace with your desired output directory
-    # segment_length_sec = 3
-    # segments = split_audio_into_segments(audio_path, segment_length_sec)
-    # if segments:
-    #     save_segments(segments, output_path)
-
-    # path = "./Data/Randomaudio2/clotho_audio_development/development/"  # Replace with your input audio file path
-    # output_path = "./Data/Randomaudio2/Segments/"  # Replace with your desired output directory
-    # segment_length_sec = 3
-    # index = 1
-    # S = []
-    # for file in os.listdir(path):
-    #     if file == "Segments": 
-    #         continue
-    #     audio_path = os.path.join(path, file)  # Replace with your input audio file path
-    #     segments = split_audio_into_segments(audio_path, segment_length_sec)
-    #     if segments:
-    #         S.extend(segments)
-
-    # save_segments(S, output_path)
+    GenerateSpectograms(Applause_path, Spectogram_Applause_path)
+    GenerateSpectograms(Randomaudio_path, Spectogram_Randomaudio_path)
     pass

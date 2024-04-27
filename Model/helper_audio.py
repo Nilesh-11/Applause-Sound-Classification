@@ -1,8 +1,14 @@
 from pydub import AudioSegment
 from pydub.utils import mediainfo
-import numpy as np
-import soundfile as sf
 from pydub.silence import split_on_silence
+import sounddevice as sd
+import soundfile as sf
+from scipy.io.wavfile import write
+import wavio as wv
+import matplotlib.pyplot as plt 
+import wave, sys 
+import numpy as np
+import os
 
 def convert_to_wav(input_file):
     try:
@@ -51,9 +57,6 @@ def save_segments(segments, output_path):
     except Exception as e:
         print(f"Error saving segments: {str(e)}")
 
-import matplotlib.pyplot as plt 
-import numpy as np 
-import wave, sys 
   
 # shows the sound waves 
 def visualize(path: str): 
@@ -93,30 +96,50 @@ def visualize(path: str):
     # plt.savefig('filename') 
 
 def remove_silence(input_file, output_file, min_silence_len=500, silence_thresh=-40):
-    print("Loading the audio file...")
+    print("Loading the audio file...", end="")
     audio = AudioSegment.from_mp3(input_file)
+    print("...done")
 
-    print("Splitting the audio based on silence...")
+    print("Splitting the audio based on silence...", end="")
     chunks = split_on_silence(audio, min_silence_len=min_silence_len, silence_thresh=silence_thresh)
+    print("...done")    
 
-    print("Concatenating non-silent chunks...")
+    print("Concatenating non-silent chunks...", end="")
     output = AudioSegment.empty()
     for chunk in chunks:
         output += chunk
+    print("...done")
         
-    print("Exporting the audio without silent parts...")
+    print("Exporting the audio without silent parts...", end="")
     output.export(output_file, format="mp3")
-    
-    print("---Done!---")
+    print("...done")
 
-# Example usage:
-input_file = "./Data/shashi.wav"
-output_file = "./silenced.wav"
+def record_audio(audio_duration_sec, recorded_audio_path, recorded_audio_filename, sample_rate=44100, channels=2):
+    # Calculate the number of frames to record based on duration and sample rate
+    num_frames = int(audio_duration_sec * sample_rate)
 
-if __name__ == "__main__": 
-    # path = "./Data/shashi.wav" 
-    
-    visualize(input_file)
-    remove_silence(input_file, output_file)  
-    visualize(output_file)
-  
+    # Start recording
+    recording = sd.rec(frames=num_frames, samplerate=sample_rate, channels=channels, dtype='int16')
+    sd.wait()  # Wait for recording to finish
+
+    # Convert recorded audio to AudioSegment
+    audio_segment = AudioSegment(
+        recording.tobytes(),  # Convert NumPy array to bytes
+        frame_rate=sample_rate,
+        sample_width=recording.dtype.itemsize,  # Sample width in bytes
+        channels=channels
+    )
+
+    # Save the recorded audio to the specified path and filename
+    output_file = recorded_audio_path + "/" + recorded_audio_filename
+    audio_segment.export(output_file, format="wav")
+
+    return output_file
+
+if __name__ == "__main__":
+    # record_audio(5, "./Data/", "recording1.wav")
+    # path = "./Model/Data/Test/silenced_output_audio.wav"
+    # output_path = "./Model/Data/Test/Applause"
+    # segments = split_audio_into_segments(path, 3)
+    # save_segments(segments, output_path)
+    pass
